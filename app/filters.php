@@ -88,3 +88,54 @@ Route::filter('csrf', function()
 		throw new Illuminate\Session\TokenMismatchException;
 	}
 });
+
+Route::filter('isAuth', function () {
+    if(!Sentry::check()) {
+        // save the attempted url
+        Session::put('attemptedUri', URL::current());
+
+        return Redirect::route('authController_login');
+    }
+
+    View::share('currentUser', Sentry::getUser());
+});
+
+Route::filter('notLogin', function () {
+    if(Sentry::check()) {
+        $url = Session::get('attemptedUri');
+        if(!isset($url)) {
+            $url = URL::route('dashboard');
+        }
+        Session::forget('attemptedUri');
+
+        return Redirect::to($url);
+    }
+});
+
+Route::filter('hasAuth', function ($route, $request, $userPermission = null) {
+    if(Sentry::check()){
+
+        if (
+            Route::currentRouteNamed('putUser') && Sentry::getUser()->id == Request::segment(3)
+            ||
+            Route::currentRouteNamed('showUser') && Sentry::getUser()->id == Request::segment(3)
+        ) {
+
+        } else {
+            if($userPermission === null) {
+                $permissions = Config::get('syntara::permissions');
+                $permission = $permissions[Route::current()->getName()];
+            } else {
+                $permission = $userPermission;
+            }
+            if(!Sentry::getUser()->hasAccess($permission)) {
+                return Response::view('error.layouts.401', array(), 401);
+            }
+
+        }
+    }else{
+        return Redirect::route('authController_login');
+    }
+
+});
+

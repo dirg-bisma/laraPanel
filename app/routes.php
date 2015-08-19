@@ -11,7 +11,10 @@
 |
 */
 
-Route::get('/', function()
-{
-	return View::make('hello');
-});
+Route::get('dashboard', array(
+    'before' => 'hasAuth:dashboard',
+    'as' => 'dashboard',
+    function() {
+        return View::make('admin.layouts.container');
+    }
+));
